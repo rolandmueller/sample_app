@@ -23,7 +23,7 @@ describe "LayoutLinks" do
   end
   
   it "should have a signup page at '/signup'" do
-    get '/signup'
+    get new_user_path
     response.should have_selector('title', :content => "Sign up")
   end
 
