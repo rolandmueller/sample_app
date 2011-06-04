@@ -23,6 +23,14 @@ class User < ActiveRecord::Base
   attr_accessible :name, :email, :password, :password_confirmation
   
   has_many :microposts, :dependent => :destroy
+  has_many :relationships, :foreign_key => "follower_id",
+                           :dependent => :destroy
+  has_many :following, :through => :relationships, :source => :followed
+  
+  has_many :reverse_relationships, :foreign_key => "followed_id",
+                                   :class_name => "Relationship",
+                                   :dependent => :destroy
+  has_many :followers, :through => :reverse_relationships, :source => :follower
 
   #
   #
@@ -46,8 +54,7 @@ class User < ActiveRecord::Base
   before_save :encrypt_password
 
   def feed
-    # This is preliminary. See Chapter 12 for the full implementation.
-    Micropost.where("user_id = ?", id)
+    Micropost.from_users_followed_by(self)
   end
 
   def has_password?(submitted_password)
@@ -65,7 +72,18 @@ class User < ActiveRecord::Base
     (user && user.salt == cookie_salt) ? user : nil
   end
 
+  def following?(followed)
+    relationships.find_by_followed_id(followed)
+  end
 
+  def follow!(followed)
+    relationships.create!(:followed_id => followed.id)
+  end
+  
+  def unfollow!(followed)
+    relationships.find_by_followed_id(followed).destroy
+  end
+  
   private
 
     def encrypt_password
